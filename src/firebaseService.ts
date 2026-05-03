@@ -34,6 +34,14 @@ export async function getTasksForDate(username: string, date: string): Promise<T
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as Task))
 }
 
+export async function getAllTasks(username: string): Promise<{ total: number; completed: number }> {
+  const q = query(collection(db, 'tasks'), where('username', '==', username))
+  const snap = await getDocs(q)
+  const total = snap.size
+  const completed = snap.docs.filter(d => d.data().completed).length
+  return { total, completed }
+}
+
 export async function addTask(username: string, text: string): Promise<Task> {
   const task = { text, completed: false, date: today(), username }
   const ref = await addDoc(collection(db, 'tasks'), task)
