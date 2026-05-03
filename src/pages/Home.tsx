@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box, Typography, TextField, IconButton, List, ListItem,
-  ListItemText, Checkbox, Tooltip, Chip
+  ListItemText, Checkbox, Tooltip, Chip, Skeleton
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -39,29 +39,30 @@ export default function Home() {
     })
   }, [user])
 
+  const refreshStats = () => {
+    if (!user) return
+    getAllTasks(user.username).then(setAllTimeStats)
+  }
+
   const handleAdd = async () => {
     if (!input.trim() || !user) return
     const task = await addTask(user.username, input.trim())
     setTasks(prev => [...prev, task])
-    setAllTimeStats(prev => ({ ...prev, total: prev.total + 1 }))
     setInput('')
+    refreshStats()
   }
 
   const handleToggle = async (task: Task) => {
     const nowCompleted = !task.completed
     await toggleTask(task.id, nowCompleted)
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, completed: nowCompleted } : t))
-    setAllTimeStats(prev => ({ ...prev, completed: prev.completed + (nowCompleted ? 1 : -1) }))
+    refreshStats()
   }
 
   const handleDelete = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId)
     await deleteTask(taskId)
     setTasks(prev => prev.filter(t => t.id !== taskId))
-    setAllTimeStats(prev => ({
-      total: prev.total - 1,
-      completed: prev.completed - (task?.completed ? 1 : 0)
-    }))
+    refreshStats()
   }
 
   const handleLogout = () => {
@@ -95,38 +96,51 @@ export default function Home() {
         </Box>
 
         {/* Streak */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, bgcolor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 3, p: 2, mb: 2 }}>
-          {streak > 0
-            ? <LocalFireDepartmentIcon sx={{ color: '#ff6b35', fontSize: 36 }} />
-            : <AcUnitIcon sx={{ color: '#64b5f6', fontSize: 36 }} />}
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>{streak} day streak</Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {streak === 0 ? 'Start your streak today!' : streak >= 7 ? "You're on fire! 🔥" : 'Keep it going!'}
-            </Typography>
+        {loading ? (
+          <Skeleton variant="rounded" height={72} sx={{ bgcolor: '#1a1a1a', borderRadius: 3, mb: 2 }} />
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, bgcolor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 3, p: 2, mb: 2 }}>
+            {streak > 0
+              ? <LocalFireDepartmentIcon sx={{ color: '#ff6b35', fontSize: 36 }} />
+              : <AcUnitIcon sx={{ color: '#64b5f6', fontSize: 36 }} />}
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{streak} day streak</Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {streak === 0 ? 'Start your streak today!' : streak >= 7 ? "You're on fire! 🔥" : 'Keep it going!'}
+              </Typography>
+            </Box>
           </Box>
-        </Box>
+        )}
 
         {/* Stats cards */}
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 3 }}>
-          <Box sx={{ bgcolor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 3, p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-              <AssignmentIcon sx={{ color: '#64b5f6', fontSize: 20 }} />
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>Total Tasks</Typography>
-            </Box>
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>{allTimeStats.total}</Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>created till date</Typography>
-          </Box>
-          <Box sx={{ bgcolor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 3, p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-              <BoltIcon sx={{ color: '#7c6af7', fontSize: 20 }} />
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>Productivity</Typography>
-            </Box>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#7c6af7' }}>
-              {allTimeStats.total === 0 ? '0' : Math.round((allTimeStats.completed / allTimeStats.total) * 100)}%
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>{allTimeStats.completed}/{allTimeStats.total} completed</Typography>
-          </Box>
+          {loading ? (
+            <>
+              <Skeleton variant="rounded" height={90} sx={{ bgcolor: '#1a1a1a', borderRadius: 3 }} />
+              <Skeleton variant="rounded" height={90} sx={{ bgcolor: '#1a1a1a', borderRadius: 3 }} />
+            </>
+          ) : (
+            <>
+              <Box sx={{ bgcolor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 3, p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                  <AssignmentIcon sx={{ color: '#64b5f6', fontSize: 20 }} />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>Total Tasks</Typography>
+                </Box>
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>{allTimeStats.total}</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>created till date</Typography>
+              </Box>
+              <Box sx={{ bgcolor: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 3, p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                  <BoltIcon sx={{ color: '#7c6af7', fontSize: 20 }} />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>Productivity</Typography>
+                </Box>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: '#7c6af7' }}>
+                  {allTimeStats.total === 0 ? '0' : Math.round((allTimeStats.completed / allTimeStats.total) * 100)}%
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>{allTimeStats.completed}/{allTimeStats.total} completed</Typography>
+              </Box>
+            </>
+          )}
         </Box>
 
         {/* Progress */}
@@ -154,7 +168,11 @@ export default function Home() {
 
         {/* Task list */}
         {loading ? (
-          <Typography sx={{ color: 'text.secondary', mt: 3 }}>Loading...</Typography>
+          <Box sx={{ mt: 1 }}>
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} variant="rounded" height={52} sx={{ bgcolor: '#1a1a1a', borderRadius: 2, mb: 1 }} />
+            ))}
+          </Box>
         ) : tasks.length === 0 ? (
           <Typography sx={{ color: 'text.secondary', mt: 4, textAlign: 'center' }}>No tasks yet. Add one above ☝️</Typography>
         ) : (
